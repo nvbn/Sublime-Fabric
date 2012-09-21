@@ -3,20 +3,22 @@
 #
 # Project: https://github.com/b3ni/Sublime-Fabric
 # License: MIT
-
 import sublime
 import sublime_plugin
+import subprocess
 import os
 
 
 class FabTasks(sublime_plugin.WindowCommand):
     """Fabric using repl in st2"""
+    _fabfiles = []
     def run(self):
-        for folder in self.window.folders():
-            self._fabfiles = filter(len, subprocess.Popen(
-                ['find', folder, '-name', 'fabfile.py'],
-                stdout=subprocess.PIPE,
-            ).stdout.read().split('\n'))
+        if not self._fabfiles:
+            for folder in self.window.folders():
+                self._fabfiles = filter(len, subprocess.Popen(
+                    ['find', folder, '-name', 'fabfile.py'],
+                    stdout=subprocess.PIPE,
+                ).stdout.read().split('\n'))
         self.files, self.tasks = zip(*reduce(
             lambda values, file: values + map(
                 lambda task: (file, task), filter(
