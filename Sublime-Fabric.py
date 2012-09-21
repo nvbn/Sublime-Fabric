@@ -3,6 +3,7 @@
 #
 # Project: https://github.com/b3ni/Sublime-Fabric
 # License: MIT
+from itertools import ifilter, chain, imap
 import sublime
 import sublime_plugin
 import subprocess
@@ -14,20 +15,22 @@ class FabTasks(sublime_plugin.WindowCommand):
     _fabfiles = []
     def run(self):
         if not self._fabfiles:
-            for folder in self.window.folders():
-                self._fabfiles = filter(len, subprocess.Popen(
-                    ['find', folder, '-name', 'fabfile.py'],
-                    stdout=subprocess.PIPE,
-                ).stdout.read().split('\n'))
-        self.files, self.tasks = zip(*reduce(
-            lambda values, file: values + map(
-                lambda task: (file, task), filter(
+            self._fabfiles = chain(*imap(
+                lambda folder: ifilter(
+                    len, subprocess.Popen(
+                        ['find', folder, '-name', 'fabfile.py'],
+                    stdout=subprocess.PIPE).stdout.read().split('\n')
+                ), self.window.folders(),
+            ))
+        self.files, self.tasks = zip(*chain(*imap(
+            lambda _file: imap(
+                lambda task: (_file, task), ifilter(
                     len, subprocess.Popen([
-                        'fab', '-l', '-F', 'short', '-f', file
+                        'fab', '-l', '-F', 'short', '-f', _file,
                     ], stdout=subprocess.PIPE).stdout.read().split('\n'),
                 ),
-            ), self._fabfiles, [],
-        ))
+            ), self._fabfiles,
+        )))
         self.window.show_quick_panel(
             list(self.tasks), self.execute,
             sublime.MONOSPACE_FONT,
